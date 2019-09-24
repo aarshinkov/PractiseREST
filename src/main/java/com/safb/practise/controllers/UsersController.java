@@ -34,20 +34,6 @@ public class UsersController
     return result;
   }
 
-  @GetMapping(params = "email", produces = MediaType.APPLICATION_JSON_VALUE)
-  public UserGetResponse getUserByEmail(@RequestParam("email") String email)
-  {
-    ModelMapper modelMapper = new ModelMapper();
-
-    UserDto user = userService.getUserByEmail(email);
-
-    UserGetResponse result = new UserGetResponse();
-
-    modelMapper.map(user, result);
-
-    return result;
-  }
-
   @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
   public List<UserGetResponse> getUsers()
   {

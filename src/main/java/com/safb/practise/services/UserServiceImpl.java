@@ -124,7 +124,8 @@ public class UserServiceImpl implements UserService
     }
 
     List<GrantedAuthority> roles = new ArrayList<>();
-//    roles.add(new SimpleGrantedAuthority("USER"));
+    roles.add(new SimpleGrantedAuthority("USER"));
+    roles.add(new SimpleGrantedAuthority("ADMIN"));
 
     return new User(userEntity.getEmail(), userEntity.getPassword(), roles);
   }

@@ -8,6 +8,7 @@ import com.safb.practise.services.*;
 import io.jsonwebtoken.*;
 import java.io.*;
 import java.util.*;
+import java.util.stream.*;
 import javax.servlet.*;
 import javax.servlet.http.*;
 import org.slf4j.*;
@@ -37,7 +38,7 @@ public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter
               .readValue(req.getInputStream(), UserLoginRequest.class);
 
       List<GrantedAuthority> roles = new ArrayList<>();
-//      roles.add(new SimpleGrantedAuthority("USER"));
+      roles.add(new SimpleGrantedAuthority("USER"));
 
       return authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(creds.getEmail(), creds.getPassword(), roles));
     }
@@ -50,21 +51,43 @@ public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter
   @Override
   protected void successfulAuthentication(HttpServletRequest req, HttpServletResponse res, FilterChain chain, Authentication auth) throws IOException, ServletException
   {
-    String username = ((User) auth.getPrincipal()).getUsername();
+//    String username = ((User) auth.getPrincipal()).getUsername();
+//
+//    log.debug("username: " + username);
+//    String token = Jwts.builder()
+//            .setSubject(username)
+//            .setExpiration(new Date(System.currentTimeMillis() + SecurityConstants.EXPIRATION_TIME))
+//            .signWith(SignatureAlgorithm.HS512, SecurityConstants.TOKEN_SECRET)
+//            .compact();
+//
+//    UserService userService = (UserService) SpringApplicationContext.getBean("userServiceImpl");
+//
+//    UserDto userDto = userService.getUserByEmail(username);
+//
+//    res.addHeader(SecurityConstants.HEADER_STRING, SecurityConstants.TOKEN_PREFIX + token);
+//    res.addHeader("Public ID", userDto.getPublicId());
 
-    log.debug("username: " + username);
+    //
+    User user = ((User) auth.getPrincipal());
+
+    List<GrantedAuthority> roles = new ArrayList();
+
+    user.getAuthorities().forEach((authority) ->
+    {
+      roles.add(authority);
+    });
+
+//    byte[] signingKey = SecurityConstants.TOKEN_SECRET.getBytes();
     String token = Jwts.builder()
-            .setSubject(username)
-            .setExpiration(new Date(System.currentTimeMillis() + SecurityConstants.EXPIRATION_TIME))
             .signWith(SignatureAlgorithm.HS512, SecurityConstants.TOKEN_SECRET)
+            .setHeaderParam("typ", SecurityConstants.TOKEN_TYPE)
+            .setIssuer(SecurityConstants.TOKEN_ISSUER)
+            .setAudience(SecurityConstants.TOKEN_AUDIENCE)
+            .setSubject(user.getUsername())
+            .setExpiration(new Date(System.currentTimeMillis() + SecurityConstants.EXPIRATION_TIME))
+            .claim("rol", roles)
             .compact();
 
-    UserService userService = (UserService) SpringApplicationContext.getBean("userServiceImpl");
-
-    UserDto userDto = userService.getUserByEmail(username);
-
     res.addHeader(SecurityConstants.HEADER_STRING, SecurityConstants.TOKEN_PREFIX + token);
-    res.addHeader("Public ID", userDto.getPublicId());
   }
-
 }
