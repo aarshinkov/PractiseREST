@@ -6,3 +6,5 @@
 **/.settings/**
 **/bin/**
 **/Archive/**
+/target/
+nb-configuration.xml

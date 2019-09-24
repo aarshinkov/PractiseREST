@@ -37,7 +37,7 @@ public class AuthorizationFilter extends BasicAuthenticationFilter
 
     UsernamePasswordAuthenticationToken authentication = getAuthentication(req);
 
-    log.debug("auth token: " + authentication.getName());
+    log.debug("auth token: " + authentication);
 
     SecurityContextHolder.getContext().setAuthentication(authentication);
     chain.doFilter(req, res);
@@ -51,9 +51,6 @@ public class AuthorizationFilter extends BasicAuthenticationFilter
     {
       token = token.replace(SecurityConstants.TOKEN_PREFIX, "");
 
-//      Jws<Claims> jwsClaims = Jwts.parser()
-//              .setSigningKey(SecurityConstants.TOKEN_SECRET)
-//              .parseClaimsJws(token);
       try
       {
         JwtParser jwtParser = Jwts.parser().setSigningKey(SecurityConstants.TOKEN_SECRET);
@@ -62,49 +59,11 @@ public class AuthorizationFilter extends BasicAuthenticationFilter
 
         Claims claims = (Claims) claimsJws.getBody();
 
-        Collection authorities
-                = Arrays.stream(claims.get("rol").toString().split(","))
-                        .map(SimpleGrantedAuthority::new)
-                        .collect(Collectors.toList());
+        String username = claims.getSubject();
 
-        for (Object authority : authorities)
-        {
-          log.debug("authority: " + authorities.toString());
-        }
+        List<GrantedAuthority> authorities = getAuthoritiesFromJwsMap(claims, SecurityConstants.JWT_AUTH_KEY);
 
-//        String username = jwsClaims
-//                .getBody()
-//                .getSubject();
-//
-////        List<GrantedAuthority> authorities = ((List<?>) jwsClaims.getBody()
-////                .get("rol")).stream()
-////                .map(authority -> new SimpleGrantedAuthority((String) authority))
-////                .collect(Collectors.toList());
-////        HashMap<String, String> roles = (HashMap<String, String>) jwsClaims.getBody().get("rol");
-//        log.debug("heree: " + jwsClaims.getBody().get("rol"));
-//
-//        ObjectMapper mapper = new ObjectMapper();
-////        RoleModel rm = mapper.readValue(jwsClaims.getBody().get("rol").toString(), RoleModel.class);
-//
-//        List<GrantedAuthority> authorities = AuthorityUtils.commaSeparatedStringToAuthorityList(jwsClaims.getBody().get("rol"));
-//
-//        log.debug("authorities size: " + authorities.size());
-//
-//        for (GrantedAuthority authority : authorities)
-//        {
-//          log.debug("auth: " + authority.getAuthority());
-//        }
-//System.out.println(user.name); //John
-//        if (!username.isEmpty())
-//        {
-//          return new UsernamePasswordAuthenticationToken(username, null, null);
-//        }
-//
-//        log.debug("user: " + username);
-//
-//        List<GrantedAuthority> roles = new ArrayList<>();
-//        roles.add(new SimpleGrantedAuthority("USER"));
-        return new UsernamePasswordAuthenticationToken("a.arshinkov97@gmail.com", null, null);
+        return new UsernamePasswordAuthenticationToken(username, null, authorities);
       }
       catch (NullPointerException np)
       {
@@ -112,5 +71,21 @@ public class AuthorizationFilter extends BasicAuthenticationFilter
       }
     }
     return null;
+  }
+
+  private List<GrantedAuthority> getAuthoritiesFromJwsMap(Claims claims, String jwtAuthKey)
+  {
+    Map<String, Object> wrapperMap = (Map<String, Object>) claims;
+
+    List<LinkedHashMap<String, String>> authPairs = (List<LinkedHashMap<String, String>>) wrapperMap.get(jwtAuthKey);
+
+    List<GrantedAuthority> authorities = new ArrayList<>();
+
+    for (LinkedHashMap<String, String> roles : authPairs)
+    {
+      authorities.add(new SimpleGrantedAuthority(roles.get("authority").toUpperCase()));
+    }
+
+    return authorities;
   }
 }
